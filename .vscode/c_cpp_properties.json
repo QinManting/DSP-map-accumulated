@@ -7,7 +7,7 @@
       },
       "includePath": [
         "/opt/ros/noetic/include/**",
-        "/home/qinmanting/Arial_learning/DSP-MAP/map_ws/src/DSP-map/include/**",
+        "/home/qinmanting/Arial_learning/DSP-MAP/map_ws/src/DSP-map-accumulated/include/**",
         "/usr/include/**",
         "/usr/local/include/munkres/"
       ],
