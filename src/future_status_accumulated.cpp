@@ -35,7 +35,7 @@ float calculateCombinedWeight(int voxel_index, pcl::PointCloud<pcl::PointXYZRGB>
 void accumulate()
 {
     pcl::PointCloud<pcl::PointXYZRGB> combined_future_status_cloud;
-    int voxel_index
+    int voxel_index;
 
     // 初始化 combined_future_status_cloud
     combined_future_status_cloud.points.resize(future_status_cloud.size());
