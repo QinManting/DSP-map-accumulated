@@ -213,7 +213,7 @@ void colorAssign(int &r, int &g, int &b, int &a, float v, float value_min=0.f, f
         value = 240 - value;
     }
 
-    int section = value / 60; //把0-240等分
+    int section = value / 2; //把0-240等分
     // float float_key = (value % 60) / (float)60 * 255;
     // int key = floor(float_key);
     // int nkey = 255 - key;
@@ -598,7 +598,8 @@ int main(int argc, char **argv)
     /// Map parameters that can be changed dynamically. But usually we still use them as static parameters.
     my_map.setPredictionVariance(0.05, 0.05); // StdDev for prediction. velocity StdDev, position StdDev, respectively.
     my_map.setObservationStdDev(0.1); // StdDev for update. position StdDev.
-    my_map.setNewBornParticleNumberofEachPoint(20); // Number of new particles generated from one measurement point.
+    // 更改新生成粒子数：20->10
+    my_map.setNewBornParticleNumberofEachPoint(10); // Number of new particles generated from one measurement point.
     my_map.setNewBornParticleWeight(0.0001); // Initial weight of particles.
     DSPMap::setOriginalVoxelFilterResolution(res); // Resolution of the voxel filter used for point cloud pre-process.
 
