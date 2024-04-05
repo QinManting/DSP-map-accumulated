@@ -254,7 +254,7 @@ public:
                 p_this.x = rotated_point_this[0];
                 p_this.y = rotated_point_this[1];
                 p_this.z = rotated_point_this[2];
-                cloud_in_current_view_rotated->push_back(p_this);
+                cloud_in_current_view_rotated->push_back(p_this);  //TODO:删除
 
                 int pyramid_index_h, pyramid_index_v;
                 pyramid_index_h = findPointPyramidHorizontalIndex(rotated_point_this[0], rotated_point_this[1], rotated_point_this[2]);
@@ -623,7 +623,7 @@ private:
 //        cout << "voxel_overflow_num="<<voxel_overflow_num<<endl;
     }
 
-
+// 用于移动粒子位置
     void mapPrediction(float odom_delt_px, float odom_delt_py, float odom_delt_pz, float delt_t)
     {
         int operation_counter = 0;
@@ -685,7 +685,7 @@ private:
                     }
                     else{
                         /// Particle moves out
-                        removeParticle(&voxels_with_particle[v_index][p][0]);
+                        removeParticle(&voxels_with_particle[v_index][p][0]); //TODO:用remove删除
                         ++ moves_out_counter;
                     }
 
@@ -700,7 +700,7 @@ private:
 
     }
 
-
+// 用于更新粒子权重
     void mapUpdate()
     {
         int operation_counter_update = 0;
@@ -811,7 +811,7 @@ public:
         static const int model_generated_particle_number_each_point = (int)((float)new_born_particle_number_each_point * 0.8f);
 
         int successfully_born_particles = 0;
-        /// TODO: Improve efficiency in this new born procedure
+        // Improve efficiency in this new born procedure
         for(auto & point : *input_cloud_with_velocity)
         {
             pcl::PointXYZ p_corrected;
@@ -938,10 +938,14 @@ private:
             for(int p=0; p<SAFE_PARTICLE_NUM_VOXEL; p++)
             {
                 if(voxels_with_particle[v_index][p][0] > 0.1f){
-                    if(voxels_with_particle[v_index][p][7] < 1e-3){
-                        voxels_with_particle[v_index][p][0] = 0.f;  // Remove the particle directly if the weight is too small
+                    // if (voxels_with_particle[v_index-1][p][0] < 0.1f && voxels_with_particle[v_index+1][p][0] < 0.1f)
+                    // {
+                    //     voxels_with_particle[v_index][p][0] = 0.f;
+                    // }
+                    if(voxels_with_particle[v_index][p][7] < 0.05f){
+                        voxels_with_particle[v_index][p][0] = 0.f;  // TODO:Remove the particle directly if the weight is too small
                     }else{
-                        if(voxels_with_particle[v_index][p][0] < 10.f){  //exclude new-born particles
+                        if(voxels_with_particle[v_index][p][0] < 10.f){  //exclude new-born particles TODO:为什么是10.0？
                             ++old_particle_num_voxel;
                             vx_sum_voxel += voxels_with_particle[v_index][p][1];
                             vy_sum_voxel += voxels_with_particle[v_index][p][2];
@@ -1274,6 +1278,7 @@ private:
     }
 
 
+    //TODO:清除粒子
     static void removeParticle(float *ori_particle_flag_ptr){
         *ori_particle_flag_ptr = 0.f;
     }
@@ -1540,7 +1545,7 @@ private:
         }
 
         clusters_feature_vector_dynamic_last = clusters_feature_vector_dynamic;
-        cout << "Velocity estimation done" << endl;
+        // cout << "Velocity estimation done" << endl;
     }
 
 
