@@ -250,13 +250,35 @@ void colorAssign(int &r, int &g, int &b, int &a, float v, float value_min=0.f, f
         //     a = 0;
         //     break;
         default: // White
-            r = 255;
-            g = 255;
-            b = 255;
+            r = 0;
+            g = 0;
+            b = 0;
             a = 0;
     }
 
 }
+
+/***
+ * Summary: 检查某点二十六邻域内是否存在占用状态点云
+ */
+bool checkIfAllNeighboursUnoccupied(const pcl::PointCloud<pcl::PointXYZRGBA> &cloud, size_t index)
+{
+    int neighbors[3] = {-1, 0, 1};
+    for (int dz : neighbors) {
+        for (int dy : neighbors) {
+            for (int dx : neighbors) {
+                if (dx != 0 || dy != 0 || dz != 0) {
+                    int neighbor_index = index + dx + dy * cloud.width + dz * cloud.width * cloud.height;
+                    if (neighbor_index >= 0 && neighbor_index < cloud.size() &&
+                        cloud.points[neighbor_index].rgba == 0) { // 假设未占据状态的点的 rgba 值为 0
+                        return false; // 存在占据状态的点云
+                    }
+                }
+            }
+        }
+    }
+    return true; // 二十六邻域全部为未占据状态
+} 
 
 /***
  * Summary: This is the main callback to update map.
@@ -402,70 +424,6 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud)
     map_pose.pose.orientation.w = uav_att.w();
     map_center_pub.publish(map_pose);
 
-    /// Publish future status of one layer 原始版
-    // pcl::PointCloud<pcl::PointXYZRGB> future_status_cloud;
-    // static const int z_index_to_show = MAP_HEIGHT_VOXEL_NUM / 2 - 1; ///Layer
-    // for(int j=0; j<MAP_WIDTH_VOXEL_NUM; ++j){
-    //     for(int i=0; i<MAP_LENGTH_VOXEL_NUM; ++i){
-    //         int index_this = z_index_to_show*MAP_WIDTH_VOXEL_NUM*MAP_LENGTH_VOXEL_NUM + j*MAP_WIDTH_VOXEL_NUM + i;
-
-    //         for(int n=0; n<PREDICTION_TIMES; ++n){
-    //             pcl::PointXYZRGB p_this;
-    //             float x_offset = (float)n * 12.f; //Used to show prediction at different times in one map
-
-    //             my_map.getVoxelPositionFromIndexPublic(index_this, p_this.x, p_this.y, p_this.z);
-    //             p_this.x += x_offset;
-
-    //             float weight_this = future_status[index_this][n];
-    //             int r, g, b;
-    //             colorAssign(r, g, b, weight_this, 0.f, 0.1f, 1);
-    //             p_this.r = r;
-    //             p_this.g = g;
-    //             p_this.b = b;
-    //             future_status_cloud.push_back(p_this);
-    //         }
-    //     }
-    // }
-
-    // Publish future status of one layer 叠加版
-    // pcl::PointCloud<pcl::PointXYZRGB> future_status_cloud;
-    // static const int z_index_to_show = MAP_HEIGHT_VOXEL_NUM / 2 - 1; ///Layer rviz展示的future_status的高度
-    // for(int j=0; j<MAP_WIDTH_VOXEL_NUM; ++j){
-    //     for(int i=0; i<MAP_LENGTH_VOXEL_NUM; ++i){
-    //         int index_this = z_index_to_show*MAP_WIDTH_VOXEL_NUM*MAP_LENGTH_VOXEL_NUM + j*MAP_WIDTH_VOXEL_NUM + i; //选择z轴高度 + 行数 + 列数
-
-    //         for(int n=0; n<PREDICTION_TIMES; ++n){
-    //             pcl::PointXYZRGB p_this;
-    //             std::vector<std::tuple<float, float, float>> added_positions;
-    //             // float x_offset = (float)n * 10.f; //Used to show prediction at different times in one map
-
-    //             my_map.getVoxelPositionFromIndexPublic(index_this, p_this.x, p_this.y, p_this.z); //通过索引获得体素的位置
-    //             // p_this.x += x_offset;
-
-    //             float weight_this = future_status[index_this][n]; //权重
-    //             int r, g, b;
-    //             colorAssign(r, g, b, weight_this, 0.f, 0.1f, 1);
-    //             p_this.r = r;
-    //             p_this.g = g;
-    //             p_this.b = b;
-    //             // p_this.a = a;
-    //             /// 检查是否已经添加过该位置
-    //             bool already_added = false;
-    //             for (const auto& position : added_positions) {
-    //                 if (std::get<0>(position) == p_this.x && std::get<1>(position) == p_this.y && std::get<2>(position) == p_this.z) {
-    //                     already_added = true;
-    //                     break;
-    //                 }
-    //             }
-
-    //             if (!already_added) {
-    //                 future_status_cloud.push_back(p_this);
-    //                 added_positions.emplace_back(p_this.x, p_this.y, p_this.z); // 将位置添加到向量中
-    //             }
-    //         }
-    //     }
-    // }
-
     /// Publish future status of all layers 叠加立体版
     pcl::PointCloud<pcl::PointXYZRGBA> future_status_cloud;
     for(int i=0; i<MAP_HEIGHT_VOXEL_NUM*MAP_WIDTH_VOXEL_NUM*MAP_LENGTH_VOXEL_NUM; i++){
@@ -494,6 +452,14 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud)
                 future_status_cloud.push_back(p_this);
                 added_positions.emplace_back(p_this.x, p_this.y, p_this.z); // 将位置添加到向量中
             }
+        }
+    }
+
+    for (size_t i = 0; i < future_status_cloud.size(); ++i) 
+    {
+        if (checkIfAllNeighboursUnoccupied(future_status_cloud, i)) 
+        { 
+        future_status_cloud.erase(future_status_cloud.begin() + i); 
         }
     }
 
