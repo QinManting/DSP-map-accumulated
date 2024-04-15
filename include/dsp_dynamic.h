@@ -31,6 +31,9 @@ Description: This is the head file for the DSP map with constant velocity model.
 #include <pcl/segmentation/extract_clusters.h>
 #include <thread>
 #include "munkres.h"
+// #include <tf2/LinearMath/Quaternion.h>
+// #include <tf2_ros/transform_broadcaster.h>
+// #include <geometry_msgs/TransformStamped.h>
 
 using namespace std;
 
@@ -141,7 +144,8 @@ static float standard_gaussian_pdf[20000];
 
 class DSPMap{
 public:
-
+    // Eigen::Matrix3d body_r_m;
+    Eigen::Matrix3d body_t_m;
     DSPMap(int init_particle_num = 0, float init_weight=0.01f)
             : voxel_num_x(MAP_LENGTH_VOXEL_NUM),  // voxel_resolution_set*voxel_num_x_set = map length
               voxel_num_y(MAP_WIDTH_VOXEL_NUM),  // voxel_resolution_set*voxel_num_y_set = map width
@@ -1105,9 +1109,20 @@ private:
         static const float correction_y = -map_length_y_half + voxel_resolution*0.5f;
         static const float correction_z = -map_length_z_half + voxel_resolution*0.5f;
 
-        px = (float)x_index * voxel_resolution + correction_x;
-        py = (float)y_index * voxel_resolution + correction_y;
-        pz = (float)z_index * voxel_resolution + correction_z;
+        // 飞机坐标系下的点云位置
+        // px = (float)x_index * voxel_resolution + correction_x;
+        // py = (float)y_index * voxel_resolution + correction_y;
+        // pz = (float)z_index * voxel_resolution + correction_z;
+        Eigen::Matrix3d p_body;
+        p_body(0) = (float)x_index * voxel_resolution + correction_x;
+        p_body(1) = (float)y_index * voxel_resolution + correction_y;
+        p_body(2) = (float)z_index * voxel_resolution + correction_z;
+        
+        Eigen::Matrix3d p;
+        p =  p_body + body_t_m;
+        px = (float)p(0);
+        py = (float)p(1);
+        pz = (float)p(2);
     }
 
     int ifParticleIsOut(const Particle &p) const{
@@ -1571,10 +1586,20 @@ public:
         static const float correction_y = -map_length_y_half + voxel_resolution*0.5f;
         static const float correction_z = -map_length_z_half + voxel_resolution*0.5f;
 
-        //对应索引的体素在实际地图中的位置
-        px = (float)x_index * voxel_resolution + correction_x; 
-        py = (float)y_index * voxel_resolution + correction_y;
-        pz = (float)z_index * voxel_resolution + correction_z;
+        // 飞机坐标系下的点云位置
+        // px = (float)x_index * voxel_resolution + correction_x;
+        // py = (float)y_index * voxel_resolution + correction_y;
+        // pz = (float)z_index * voxel_resolution + correction_z;
+        Eigen::Matrix3d p_body;
+        p_body(0) = (float)x_index * voxel_resolution + correction_x;
+        p_body(1) = (float)y_index * voxel_resolution + correction_y;
+        p_body(2) = (float)z_index * voxel_resolution + correction_z;
+        
+        Eigen::Matrix3d p;
+        p =  p_body + body_t_m;
+        px = (float)p(0);
+        py = (float)p(1);
+        pz = (float)p(2);
     }
 
     int getPointVoxelsIndexPublic(const float &px, const float &py, const float &pz, int & index){

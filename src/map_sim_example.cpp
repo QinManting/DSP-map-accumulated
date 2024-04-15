@@ -75,7 +75,7 @@ void actor_publish(const vector<Eigen::Vector3d> &actors, int id, float r, float
 
     visualization_msgs::Marker marker;
 
-    marker.header.frame_id = "map";
+    marker.header.frame_id = "world";
     marker.header.stamp = ros::Time::now();
     marker.type = visualization_msgs::Marker::CYLINDER;
     marker.action = visualization_msgs::Marker::ADD;
@@ -129,9 +129,9 @@ static void rotateVectorByQuaternion(geometry_msgs::Point &vector, Eigen::Quater
  */
 void showFOV(Eigen::Vector3d &position, Eigen::Quaternionf &att, double angle_h, double angle_v, double length){
     geometry_msgs::Point p_cam;
-    p_cam.x = 0;
-    p_cam.y = 0;
-    p_cam.z = 0;
+    p_cam.x = position(0);
+    p_cam.y = position(1);
+    p_cam.z = position(2);
 
     geometry_msgs::Point p1, p2, p3, p4;
     p1.x = length;
@@ -155,7 +155,7 @@ void showFOV(Eigen::Vector3d &position, Eigen::Quaternionf &att, double angle_h,
     rotateVectorByQuaternion(p4, att);
 
     visualization_msgs::Marker fov;
-    fov.header.frame_id = "map";
+    fov.header.frame_id = "world";
     fov.header.stamp = ros::Time::now();
     fov.action = visualization_msgs::Marker::ADD;
     fov.ns = "lines_and_points";
@@ -225,30 +225,6 @@ void colorAssign(int &r, int &g, int &b, int &a, float v, float value_min=0.f, f
             b = 0;
             a = 255;
             break;
-        // case 1: // R decrease
-        //     r = 255;
-        //     g = 0;
-        //     b = 0;
-        //     a = 255;
-        //     break;
-        // case 2: // B increase
-        //     r = 255;
-        //     g = 0;
-        //     b = 0;
-        //     a = 255;
-        //     break;
-        // case 3: // G decrease
-        //     r = 255;
-        //     g = 0;
-        //     b = 0;
-        //     a = 255;
-        //     break;
-        // case 4: // Sky blue
-        //     r = 255;
-        //     g = 255;
-        //     b = 255;
-        //     a = 0;
-        //     break;
         default: // White
             r = 0;
             g = 0;
@@ -261,24 +237,24 @@ void colorAssign(int &r, int &g, int &b, int &a, float v, float value_min=0.f, f
 /***
  * Summary: 检查某点二十六邻域内是否存在占用状态点云
  */
-bool checkIfAllNeighboursUnoccupied(const pcl::PointCloud<pcl::PointXYZRGBA> &cloud, size_t index)
-{
-    int neighbors[3] = {-1, 0, 1};
-    for (int dz : neighbors) {
-        for (int dy : neighbors) {
-            for (int dx : neighbors) {
-                if (dx != 0 || dy != 0 || dz != 0) {
-                    int neighbor_index = index + dx + dy * cloud.width + dz * cloud.width * cloud.height;
-                    if (neighbor_index >= 0 && neighbor_index < cloud.size() &&
-                        cloud.points[neighbor_index].rgba == 0) { // 假设未占据状态的点的 rgba 值为 0
-                        return false; // 存在占据状态的点云
-                    }
-                }
-            }
-        }
-    }
-    return true; // 二十六邻域全部为未占据状态
-} 
+// bool checkIfAllNeighboursUnoccupied(const pcl::PointCloud<pcl::PointXYZ> &cloud, size_t index)
+// {
+//     int neighbors[3] = {-1, 0, 1};
+//     for (int dz : neighbors) {
+//         for (int dy : neighbors) {
+//             for (int dx : neighbors) {
+//                 if (dx != 0 || dy != 0 || dz != 0) {
+//                     int neighbor_index = index + dx + dy * cloud.width + dz * cloud.width * cloud.height;
+//                     if (neighbor_index >= 0 && neighbor_index < cloud.size() &&
+//                         !pcl::isFinite(cloud.points[neighbor_index])) { // 假设未占据状态的点的 rgba 值为 0
+//                         return false; // 存在占据状态的点云
+//                     }
+//                 }
+//             }
+//         }
+//     }
+//     return true; // 二十六邻域全部为未占据状态
+// } 
 
 /***
  * Summary: This is the main callback to update map.
@@ -316,7 +292,7 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud)
                 uav_position = position_last_popped * (1.0 - factor) + uav_position*factor;
             }
 
-            ROS_INFO_THROTTLE(3.0, "cloud mismatch time = %lf", cloud->header.stamp.toSec() - time_stamp_pose);
+            // ROS_INFO_THROTTLE(3.0, "cloud mismatch time = %lf", cloud->header.stamp.toSec() - time_stamp_pose);
 
             break;
         }
@@ -368,7 +344,7 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud)
     clock_t start1, finish1;
     start1 = clock();
 
-    std::cout << "uav_position="<<uav_position.x() <<", "<<uav_position.y()<<", "<<uav_position.z()<<endl;
+    // std::cout << "uav_position="<<uav_position.x() <<", "<<uav_position.y()<<", "<<uav_position.z()<<endl;
 
     // This is the core function we use
     if(!my_map.update(useful_point_num, 3, point_clouds,
@@ -380,14 +356,14 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud)
     /// Display update time
     finish1 = clock();
     double duration1 = (double)(finish1 - start1) / CLOCKS_PER_SEC;
-    printf( "****** Map update time %f seconds\n", duration1);
+    // printf( "****** Map update time %f seconds\n", duration1);
 
     static double total_time = 0.0;
     static int update_times = 0;
 
     total_time += duration1;
     update_times ++;
-    printf( "****** Map avg time %f seconds\n \n", total_time / update_times);
+    // printf( "****** Map avg time %f seconds\n \n", total_time / update_times);
 
 
     /// Get occupancy status, including future status.
@@ -404,12 +380,20 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud)
      * future_status[*][0] is current status considering delay compensation.
     **/
 
-      my_map.getOccupancyMapWithFutureStatus(occupied_num, cloud_to_publish, &future_status[0][0], 0.2);
+    my_map.getOccupancyMapWithFutureStatus(occupied_num, cloud_to_publish, &future_status[0][0], 0.2);
 
     /// Publish Point cloud and center position 
     // 发布最初状态点云
+
+    // for (size_t i = 0; i < cloud_to_publish.size(); ++i) 
+    // {
+    //     if (checkIfAllNeighboursUnoccupied(cloud_to_publish, i)) 
+    //     { 
+    //     cloud_to_publish.erase(cloud_to_publish.begin() + i); 
+    //     }
+    // }
     pcl::toROSMsg(cloud_to_publish, cloud_to_pub_transformed); 
-    cloud_to_pub_transformed.header.frame_id = "map";
+    cloud_to_pub_transformed.header.frame_id = "world";
     cloud_to_pub_transformed.header.stamp = cloud->header.stamp;
     cloud_pub.publish(cloud_to_pub_transformed);
 
@@ -454,25 +438,24 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud)
             }
         }
     }
-
-    for (size_t i = 0; i < future_status_cloud.size(); ++i) 
-    {
-        if (checkIfAllNeighboursUnoccupied(future_status_cloud, i)) 
-        { 
-        future_status_cloud.erase(future_status_cloud.begin() + i); 
-        }
-    }
+    // for (size_t i = 0; i < future_status_cloud.size(); ++i) 
+    // {
+    //     if (checkIfAllNeighboursUnoccupied(future_status_cloud, i)) 
+    //     { 
+    //     future_status_cloud.erase(future_status_cloud.begin() + i); 
+    //     }
+    // }
 
     sensor_msgs::PointCloud2 cloud_future_transformed;
     pcl::toROSMsg(future_status_cloud, cloud_future_transformed);
-    cloud_future_transformed.header.frame_id = "map";
+    cloud_future_transformed.header.frame_id = "world";
     cloud_future_transformed.header.stamp = cloud->header.stamp;
     future_status_pub.publish(cloud_future_transformed);
 
     finish2 = clock();
 
     double duration2 = (double)(finish2 - start2) / CLOCKS_PER_SEC;
-    printf( "****** Map publish time %f seconds\n \n", duration2);
+    // printf( "****** Map publish time %f seconds\n \n", duration2);
 
     /// Publish update time for evaluation tools
     std_msgs::Float64 update_time;
@@ -540,7 +523,7 @@ void simPoseCallback(const geometry_msgs::PoseStamped &msg)
         uav_position_global_queue.push(uav_position_global);
         uav_att_global_queue.push(uav_att_global);
         pose_att_time_queue.push(msg.header.stamp.toSec());
-        ROS_INFO("Pose updated");
+        // ROS_INFO("Pose updated");
     }
 
     state_locked = false;
@@ -553,6 +536,33 @@ void simPoseCallback(const geometry_msgs::PoseStamped &msg)
     Eigen::Quaternionf rotated_att = uav_att_global * axis;
 
     showFOV(uav_position_global, rotated_att, 90.0 / 180.0 * M_PI, 54.0 / 180.0 * M_PI , 5);
+
+    
+    
+    // Eigen::Quaterniond body_q = Eigen::Quaterniond(msg.pose.orientation.w,
+    //                                              msg.pose.orientation.x,
+    //                                              msg.pose.orientation.y,
+    //                                              msg.pose.orientation.z);
+    // my_map.body_r_m = body_q.toRotationMatrix();
+    my_map.body_t_m(0) = msg.pose.position.x;
+    my_map.body_t_m(1) = msg.pose.position.y;
+    my_map.body_t_m(2) = msg.pose.position.z;
+
+    // static tf2_ros::TransformBroadcaster br;
+    // geometry_msgs::TransformStamped transformStamped;
+    // transformStamped.header.stamp = ros::Time::now();
+    // transformStamped.header.frame_id = "world";
+    // transformStamped.child_frame_id = "body";
+    // transformStamped.transform.translation.x = uav_position_global.x();
+    // transformStamped.transform.translation.y = uav_position_global.y();
+    // transformStamped.transform.translation.z = uav_position_global.z();
+
+    // transformStamped.transform.rotation.x = uav_att_global.x();
+    // transformStamped.transform.rotation.y = uav_att_global.y();
+    // transformStamped.transform.rotation.z = uav_att_global.z();
+    // transformStamped.transform.rotation.w = uav_att_global.w();
+
+    // br.sendTransform(transformStamped);
 }
 
 
@@ -576,9 +586,9 @@ int main(int argc, char **argv)
     ros::Subscriber object_states_sub = n.subscribe("/gazebo/model_states", 1, simObjectStateCallback);
 
     /// Input data for the map
-    ros::Subscriber point_cloud_sub = n.subscribe("/camera_front/depth/points", 1, cloudCallback);
+    ros::Subscriber point_cloud_sub = n.subscribe("/iris_D435i/realsense/depth_camera/depth/points", 1, cloudCallback);
     ros::Subscriber pose_sub = n.subscribe("/mavros/local_position/pose", 1, simPoseCallback);
-
+    
     /// Visualization topics
     cloud_pub = n.advertise<sensor_msgs::PointCloud2>("/my_map/cloud_ob", 1, true);
     map_center_pub = n.advertise<geometry_msgs::PoseStamped>("/my_map/map_center", 1, true);
@@ -593,6 +603,11 @@ int main(int argc, char **argv)
     fov_pub = n.advertise<visualization_msgs::Marker>("/visualization_fov", 1);
 
     update_time_pub = n.advertise<std_msgs::Float64>("/map_update_time", 1);
+
+    // while (ros::ok())
+    // {
+    //     tf_body2world(br);
+    // }
 
     /// Ros spin
     ros::AsyncSpinner spinner(3); // Use 3 threads
