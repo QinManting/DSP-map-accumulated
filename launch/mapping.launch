@@ -5,10 +5,13 @@
 	<!-- <remap from="/my_map/cloud_ob" to="/map_generator/global_cloud"/> -->
 	</node>
 	
+	<!-- <node pkg="rviz" type="rviz" name="rviz5" args="-d $(find dynamic_occpuancy_map)/rviz/filtered.rviz" /> -->
+	<!-- <node pkg="rviz" type="rviz" name="rviz4" args="-d $(find dynamic_occpuancy_map)/rviz/nonfiltered.rviz" /> -->
 	<!-- <node pkg="rviz" type="rviz" name="rviz3" args="-d $(find dynamic_occpuancy_map)/rviz/original_pointcloud.rviz"/> -->
 	<!-- <node pkg="rviz" type="rviz" name="rviz2" args="-d $(find dynamic_occpuancy_map)/rviz/future_status.rviz"/> -->
-	<node pkg="rviz" type="rviz" name="rviz1" args="-d $(find dynamic_occpuancy_map)/rviz/boxes.rviz" />
+	<!-- <node pkg="rviz" type="rviz" name="rviz1" args="-d $(find dynamic_occpuancy_map)/rviz/boxes.rviz" /> -->
 	
+
 	<!-- 数据包的frame_id是"map" -->
 	<!-- <arg name="bag_dir" default="$(find dynamic_occpuancy_map)/data"/>
 	<arg name="dataset_name" default="street"/>

@@ -1,0 +1,8 @@
+prefix=/home/qinmanting/Arial_learning/DSP-MAP/map_ws/src/DSP-map-accumulated/build/devel
+
+Name: dynamic_occpuancy_map
+Description: Description of dynamic_occpuancy_map
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

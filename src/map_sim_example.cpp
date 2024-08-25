@@ -85,7 +85,8 @@ float z_max = MAP_HEIGHT_VOXEL_NUM * VOXEL_RESOLUTION / 2;
 ros::Publisher cloud_pub, map_center_pub, gazebo_model_states_pub,
     current_velocity_pub, single_object_velocity_pub,
     single_object_velocity_truth_pub;
-ros::Publisher future_status_pub, current_marker_pub, fov_pub, update_time_pub;
+ros::Publisher future_status_pub, current_marker_pub, current_marker_1_pub,
+    fov_pub, update_time_pub;
 gazebo_msgs::ModelStates ground_truth_model_states;
 
 int ground_truth_updated = 0;
@@ -260,81 +261,6 @@ void colorAssign(int &r, int &g, int &b, int &a, float v, float value_min = 0.f,
   }
 }
 
-// void removeEmptySurroundings(pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud) {
-
-//   if (cloud == nullptr) {
-//     std::cerr << "Error: Input point cloud pointer is null!" << std::endl;
-//   }
-//   // 检查点云是否为空
-//   if (cloud->empty()) {
-//     std::cerr << "Error: Input point cloud is empty!" << std::endl;
-//     return;
-//   }
-//   // 创建 KD 树对象
-//   pcl::KdTreeFLANN<pcl::PointXYZRGBA> kdtree;
-//   kdtree.setInputCloud(cloud);
-
-//   // 存储索引的容器
-//   std::vector<int> pointIdxRadiusSearch;
-//   std::vector<float> pointRadiusSquaredDistance;
-
-//   // 定义半径搜索的半径大小
-//   float radius = 0.05; // 调整这个值以适应你的需求
-
-//   // 存储非空点的索引
-//   std::vector<int> validIndices;
-
-//   // 遍历点云中的每个点
-//   for (size_t i = 0; i < cloud->size(); ++i) {
-//     std::cout << "cloud size is:" << cloud->size() << std::endl;
-//     std::cout << "Now i is:" << i << std::endl;
-
-//     if (i >= cloud->size()) {
-//       std::cerr << "Error: Index out of range!" << std::endl;
-//     }
-
-//     // 在半径范围内搜索点
-//     if (kdtree.radiusSearch(cloud->points[i], radius, pointIdxRadiusSearch,
-//                             pointRadiusSquaredDistance) > 0) {
-//       // 如果周围有其他点，则将当前点的索引存储起来
-//       if (i < cloud->size() && i > 0) {
-//         validIndices.push_back(i);
-//         std::cout << "Index is:" << i << std::endl;
-//       }
-//     }
-//   }
-
-//   // 检查是否没有找到有效点
-//   if (validIndices.empty()) {
-//     std::cerr << "Error: No valid points found in the vicinity!" <<
-//     std::endl; return;
-//   }
-
-//   // 从点云中提取有效点
-//   pcl::ExtractIndices<pcl::PointXYZRGBA> extract;
-//   pcl::PointIndices::Ptr indices(new pcl::PointIndices());
-//   indices->indices = validIndices;
-//   extract.setInputCloud(cloud);
-//   extract.setIndices(indices);
-//   extract.setNegative(false);
-//   std::cout << "5" << std::endl;
-
-//   // if (!cloud) {
-//   //   std::cerr << "Error: Input point cloud pointer is null!" << std::endl;
-//   //   return;
-//   // }
-//   // for (size_t i = 0; i < validIndices.size(); ++i) {
-//   //   if (validIndices[i] <= 0) {
-//   //     std::cerr << "validIndices小于索引值" << std::endl;
-//   //   } else if (validIndices[i] > cloud->size()) {
-//   //     std::cerr << "validIndices大于索引值" << std::endl;
-//   //   }
-//   // }
-
-//   extract.filter(*cloud);
-//   std::cout << "6" << std::endl;
-// }
-
 /***
  * Summary: This is the main callback to update map.
  */
@@ -494,7 +420,7 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud) {
   pcl::toROSMsg(*cloud_filtered_ob, cloud_to_pub_transformed);
   cloud_to_pub_transformed.header.frame_id = "world";
   cloud_to_pub_transformed.header.stamp = cloud->header.stamp;
-  cloud_pub.publish(cloud_to_pub_transformed);
+  // cloud_pub.publish(cloud_to_pub_transformed);
 
   geometry_msgs::PoseStamped map_pose;
   map_pose.header.stamp = cloud_to_pub_transformed.header.stamp;
@@ -546,12 +472,19 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud) {
     }
   }
 
+  pcl::toROSMsg(*future_status_cloud, cloud_to_pub_transformed);
+  cloud_to_pub_transformed.header.frame_id = "world";
+  cloud_to_pub_transformed.header.stamp = cloud->header.stamp;
+  cloud_pub.publish(cloud_to_pub_transformed);
+
   pcl::RadiusOutlierRemoval<pcl::PointXYZRGBA> outrem_future; // 创建滤波器
   if (!future_status_cloud->empty()) {
     outrem_future.setInputCloud(future_status_cloud); // 设置输入点云
-    outrem_future.setRadiusSearch(0.5); // 设置半径为0.15的范围内找临近点
+    // 运行规划时：设置半径为0.15的范围内找临近点
+    // 单地图时：设置半径为0.2的范围内找临近点
+    outrem_future.setRadiusSearch(0.2);
     outrem_future.setMinNeighborsInRadius(
-        2); // 设置查询点的邻域点集数小于2的删除
+        3); // 设置查询点的邻域点集数小于3的删除
     // outrem_future.setNegative(false);
     outrem_future.filter(
         *cloud_filtered_future); // 执行条件滤波  在半径为0.15
@@ -597,6 +530,7 @@ static void split(const string &s, vector<string> &tokens,
 void simObjectStateCallback(const gazebo_msgs::ModelStates &msg) {
   ground_truth_model_states = msg;
   ground_truth_updated = 1;
+  int number;
 
   vector<Eigen::Vector3d> actor_visualization_points;
 
@@ -605,9 +539,15 @@ void simObjectStateCallback(const gazebo_msgs::ModelStates &msg) {
     split(msg.name[i], name_splited, "_");
     if (name_splited[0] == "actor") {
       Eigen::Vector3d p;
-      p.x() = msg.pose[i].position.x - uav_position_global.x();
-      p.y() = msg.pose[i].position.y - uav_position_global.y();
-      p.z() = msg.pose[i].position.z - uav_position_global.z();
+      p.x() = msg.pose[i].position.x;
+      p.y() = msg.pose[i].position.y;
+      p.z() = msg.pose[i].position.z;
+      actor_visualization_points.push_back(p);
+    } else if (name_splited[0] == "actor1") {
+      Eigen::Vector3d p;
+      p.x() = msg.pose[i].position.x;
+      p.y() = msg.pose[i].position.y;
+      p.z() = msg.pose[i].position.z;
       actor_visualization_points.push_back(p);
     }
   }
